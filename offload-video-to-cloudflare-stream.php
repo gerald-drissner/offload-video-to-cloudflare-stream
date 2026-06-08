@@ -314,7 +314,8 @@ final class Offload_Video_To_Cloudflare_Stream {
     private static function admin_css(): string {
         return implode("\n", [
             '.ovcs-wrap { max-width: 1280px; }',
-            '.ovcs-plugin-meta { color:#646970; margin:6px 0 18px; font-size:13px; }',
+            '.ovcs-dashboard-footer { color:#646970; margin:18px 0 0; padding-top:12px; border-top:1px solid #dcdcde; font-size:12px; line-height:1.5; text-align:right; }',
+            '@media (max-width: 782px) { .ovcs-dashboard-footer { text-align:left; } }',
             '.ovcs-card { background:#fff; border:1px solid #dcdcde; border-radius:10px; padding:18px 20px; margin:16px 0; box-shadow:0 1px 2px rgba(0,0,0,.03); }',
             '.ovcs-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(320px,420px); gap:18px; align-items:start; }',
             '.ovcs-help { color:#646970; margin-top:4px; }',
@@ -498,7 +499,6 @@ final class Offload_Video_To_Cloudflare_Stream {
         echo '<div class="wrap ovcs-wrap">';
         echo '<h1>' . esc_html__('Cloudflare Stream Offloader', 'offload-video-to-cloudflare-stream') . '</h1>';
         echo '<p class="description">' . esc_html__('Upload selected WordPress video attachments to Cloudflare Stream and serve ready videos from the Cloudflare Stream player.', 'offload-video-to-cloudflare-stream') . '</p>';
-        echo '<p class="ovcs-plugin-meta">' . sprintf(esc_html__('Version %1$s · Copyright © %2$s Gerald Drißner', 'offload-video-to-cloudflare-stream'), esc_html(self::VERSION), esc_html(gmdate('Y'))) . '</p>';
 
         if (is_array($notice)) {
             foreach ($notice as $item) {
@@ -517,6 +517,9 @@ final class Offload_Video_To_Cloudflare_Stream {
         self::render_settings_box($options);
         echo '</div>';
         echo '</div>';
+        echo '<footer class="ovcs-dashboard-footer" aria-label="' . esc_attr__('Plugin information', 'offload-video-to-cloudflare-stream') . '">';
+        echo esc_html(sprintf(__('Version %1$s · Copyright © %2$s Gerald Drißner · Licensed under GPLv2 or later.', 'offload-video-to-cloudflare-stream'), self::VERSION, gmdate('Y')));
+        echo '</footer>';
         echo '</div>';
     }
 

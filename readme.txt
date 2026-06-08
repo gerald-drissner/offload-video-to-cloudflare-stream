@@ -27,7 +27,7 @@ This is useful if self‑hosted videos are slowing your site down, eating bandwi
 * Automatically replaces your local video output on the frontend with the Cloudflare Stream player once the matching Stream video is ready (this is optional and can be turned off — see "Automatic replacement" below).
 * Provides a shortcode for manual placement of the player (see the "Shortcode" section below for the exact tag and options).
 * Includes a non‑destructive **Connection test** that checks your token, account access, and playback settings without uploading anything.
-* Shows the plugin version and copyright attribution in the plugin dashboard.
+* Shows the plugin version, copyright attribution, and GPLv2-or-later license notice in a small plugin dashboard footer.
 * Never deletes your local video files. Removing local files is intentionally left to you.
 
 = Do I need a paid Cloudflare account? =

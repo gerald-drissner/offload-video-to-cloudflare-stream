@@ -23,7 +23,7 @@ This is an independent project. It is not affiliated with, endorsed by, or spons
 - Manual shortcode: `[cloudflare_stream_video id="123"]` or `[cloudflare_stream_video uid="VIDEO_UID"]`.
 - Non-destructive Cloudflare connection test.
 - Setup checklist in the WordPress dashboard collapses after a successful connection test and can be reopened with one click.
-- Dashboard displays the current plugin version and copyright attribution.
+- Dashboard footer displays the current plugin version, copyright attribution, and GPLv2-or-later license notice.
 - Does not delete local files or Cloudflare videos.
 
 ## Cloudflare setup

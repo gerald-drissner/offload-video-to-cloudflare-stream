@@ -10,6 +10,6 @@
 - Manual `[cloudflare_stream_video]` shortcode.
 - Non-destructive connection test.
 - Setup checklist collapses after a successful connection test and can be reopened with one click.
-- Dashboard displays the plugin version and copyright attribution.
+- Dashboard footer displays the plugin version, copyright attribution, and GPLv2-or-later license notice.
 - Administrator-only management by default.
 - WordPress.org-ready `readme.txt`, uninstall cleanup, and translation path.
