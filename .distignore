@@ -1,0 +1,16 @@
+.git/
+.github/
+bin/
+dist/
+.DS_Store
+.editorconfig
+.gitignore
+.distignore
+composer.json
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+WORDPRESS_ORG_RELEASE.md
+LICENSE
+*.zip
