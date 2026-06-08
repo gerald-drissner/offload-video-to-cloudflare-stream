@@ -27,6 +27,7 @@ This is useful if self‑hosted videos are slowing your site down, eating bandwi
 * Automatically replaces your local video output on the frontend with the Cloudflare Stream player once the matching Stream video is ready (this is optional and can be turned off — see "Automatic replacement" below).
 * Provides a shortcode for manual placement of the player (see the "Shortcode" section below for the exact tag and options).
 * Includes a non‑destructive **Connection test** that checks your token, account access, and playback settings without uploading anything.
+* Shows the plugin version and copyright attribution in the plugin dashboard.
 * Never deletes your local video files. Removing local files is intentionally left to you.
 
 = Do I need a paid Cloudflare account? =
@@ -64,23 +65,23 @@ You need three pieces of information from your Cloudflare account.
 Log in to the Cloudflare dashboard at https://dash.cloudflare.com/ and open the **Stream** product (or any account page). Your Account ID is shown in the URL and on the account/overview pages. It is a 32‑character hexadecimal string.
 
 **2. API Token (with Stream permission)**
-Create a scoped token so the plugin can upload and check status:
+Create a scoped token so the plugin can upload and check status. Do **not** use the Global API Key.
 
-1. Open the Stream token guide for the exact steps: https://developers.cloudflare.com/videos/create-api-tokens/
-2. In the dashboard, go to **Manage Account → Account API Tokens** (or your user **My Profile → API Tokens**) and choose **Create Token → Create Custom Token**. Direct link: https://dash.cloudflare.com/profile/api-tokens
-3. Under **Permissions**, add: **Account → Stream → Edit**. ("Edit" gives the upload, read, and delete access the plugin needs; if you only want status checks and never uploads, "Read" is enough, but uploads require "Edit".)
-4. Under **Account Resources**, scope the token to the specific account you will use.
+1. In the Cloudflare dashboard, go to **Manage Account → API Tokens** or **My Profile → API Tokens** and choose **Create Token → Create Custom Token**. Direct link: https://dash.cloudflare.com/profile/api-tokens
+2. Under **Permissions**, add **Account → Stream → Edit**. Some Cloudflare screens use the newer label **Account → Stream → Write**; that is the equivalent write permission. Uploads require Edit/Write. Read-only tokens can verify access but cannot upload videos.
+3. Under **Account Resources**, scope the token to the specific Cloudflare account that owns the Stream library.
+4. Do not add unnecessary permissions. This plugin does **not** need DNS, Zone, Workers, Cache Purge, or Global API Key permissions.
 5. (Recommended) Set an expiration and, if your server has a static IP, restrict the token to that IP.
 6. Click **Continue to summary → Create Token**. **Copy the token immediately** — Cloudflare shows it only once and you cannot retrieve it later.
 
 For better security you can define the token in your `wp-config.php` instead of saving it in the database:
 
-`define( 'GD_CFS_API_TOKEN', 'your-token-here' );`
+`define( 'OVCS_API_TOKEN', 'your-token-here' );`
 
 When this constant is set, the plugin uses it and never stores the token in the WordPress database (so it stays out of database backups).
 
 **3. Customer Code**
-This is the code in your Stream playback URLs, of the form `customer-CODE.cloudflarestream.com`. You can see it in any Stream embed/iframe URL in the Cloudflare Stream dashboard. The plugin needs it to build the player iframe. You may paste the bare code, the full customer subdomain, the iframe URL, or the full iframe snippet; the plugin extracts and stores only the code.
+This is the code in your Stream playback URLs, of the form `customer-CODE.cloudflarestream.com`. The plugin needs it to build the official Cloudflare Stream iframe URL. To find it, open **Cloudflare Dashboard → Stream → Videos**, open any uploaded video, and copy the embed/iframe code. The iframe `src` contains `customer-CODE.cloudflarestream.com`. You may paste the bare code, the full customer subdomain, the iframe URL, or the full iframe snippet; the plugin extracts and stores only the code.
 
 == Automatic replacement (serve from Cloudflare Stream when available) ==
 
@@ -98,11 +99,11 @@ Use the shortcode to place a Cloudflare Stream player manually, for example insi
 
 By WordPress attachment ID (the ID shown in the Media → Cloudflare Stream table):
 
-`[gd_cloudflare_stream id="123"]`
+`[cloudflare_stream_video id="123"]`
 
 By Cloudflare Stream UID directly:
 
-`[gd_cloudflare_stream uid="VIDEO_UID"]`
+`[cloudflare_stream_video uid="VIDEO_UID"]`
 
 Optional attributes:
 
@@ -111,7 +112,7 @@ Optional attributes:
 
 Example with options:
 
-`[gd_cloudflare_stream id="123" title="My talk" aspect="16/9"]`
+`[cloudflare_stream_video id="123" title="My talk" aspect="16/9"]`
 
 The shortcode requires the **Customer Code** setting to be filled in, because that is what builds the official Cloudflare Stream iframe URL. If a logged‑in editor views a shortcode that cannot render (missing UID, wrong ID, missing Customer Code), the plugin shows a short admin‑only notice explaining why; normal visitors simply see nothing.
 
@@ -149,12 +150,12 @@ Yes. The frontend output is a standard iframe, so it caches well. If you use Aut
 No. After upload, Cloudflare processes the video on its side. The plugin checks status in the background every 10 minutes while videos are still processing, and stops checking once they are all ready. You can also refresh status manually at any time.
 
 = Can I store the API token outside the database? =
-Yes. Define `GD_CFS_API_TOKEN` in `wp-config.php` and the plugin will use that and never write the token to the database.
+Yes. Define `OVCS_API_TOKEN` in `wp-config.php` and the plugin will use that and never write the token to the database.
 
 == Screenshots ==
 
 1. The Cloudflare Stream manager under Media, showing the video library with status badges and bulk actions.
-2. The settings panel with Account ID, API token, Customer Code, allowed origins, and the automatic‑replacement options.
+2. The settings panel with Account ID, API token, Customer Code, allowed origins, collapsible setup help, and the automatic‑replacement options.
 3. The non‑destructive connection test with red/amber/green diagnostics.
 
 == Changelog ==
@@ -171,9 +172,9 @@ Yes. Define `GD_CFS_API_TOKEN` in `wp-config.php` and the plugin will use that a
 * Restricted Cloudflare Stream management to administrators by default, because uploads can incur Cloudflare usage costs.
 * Made the Customer Code field accept a full iframe/embed snippet and extract the code automatically.
 * Kept local WordPress video output in place until the Cloudflare Stream video is marked ready.
-* (Carries forward all 0.2.x functionality: URL‑copy with direct‑upload fallback under 200 MB, self‑managing status cron, connection test, and automatic frontend replacement for blocks, [video] shortcodes, local <video> HTML, and local video‑file links.)
+* Carries forward the 0.2.x functionality: URL-copy with direct-upload fallback under 200 MB, self-managing status cron, connection test, collapsible setup help, shortcode playback, and automatic frontend replacement for blocks, [video] shortcodes, local <video> HTML, and local video-file links.
 
 == Upgrade Notice ==
 
 = 1.0.0 =
-First public release. If you used a pre‑release build, your existing settings and uploaded‑video metadata are preserved.
+First public release. If you used an unpublished pre-release build, re-enter the settings after installing this public build.

@@ -16,27 +16,27 @@
 
 defined('ABSPATH') || exit;
 
-final class GD_Cloudflare_Stream_Offloader {
+final class Offload_Video_To_Cloudflare_Stream {
     const VERSION = '1.0.0';
-    const OPTION  = 'gd_cfs_options';
-    const CRON_HOOK = 'gd_cfs_status_cron';
+    const OPTION  = 'ovcs_options';
+    const CRON_HOOK = 'ovcs_status_cron';
 
     // Cloudflare basic (single-request multipart) upload hard limit.
     const DIRECT_UPLOAD_MAX_BYTES = 200 * 1024 * 1024; // 200 MB
 
-    const META_UID          = '_gd_cfs_uid';
-    const META_STATE        = '_gd_cfs_state';
-    const META_READY        = '_gd_cfs_ready';
-    const META_PCT          = '_gd_cfs_pct_complete';
-    const META_THUMBNAIL    = '_gd_cfs_thumbnail';
-    const META_PREVIEW      = '_gd_cfs_preview';
-    const META_HLS          = '_gd_cfs_hls';
-    const META_DASH         = '_gd_cfs_dash';
-    const META_ERROR        = '_gd_cfs_last_error';
-    const META_UPLOADED_AT  = '_gd_cfs_uploaded_at';
-    const META_CHECKED_AT   = '_gd_cfs_checked_at';
-    const META_RESULT_JSON  = '_gd_cfs_result_json';
-    const META_METHOD       = '_gd_cfs_upload_method';
+    const META_UID          = '_ovcs_uid';
+    const META_STATE        = '_ovcs_state';
+    const META_READY        = '_ovcs_ready';
+    const META_PCT          = '_ovcs_pct_complete';
+    const META_THUMBNAIL    = '_ovcs_thumbnail';
+    const META_PREVIEW      = '_ovcs_preview';
+    const META_HLS          = '_ovcs_hls';
+    const META_DASH         = '_ovcs_dash';
+    const META_ERROR        = '_ovcs_last_error';
+    const META_UPLOADED_AT  = '_ovcs_uploaded_at';
+    const META_CHECKED_AT   = '_ovcs_checked_at';
+    const META_RESULT_JSON  = '_ovcs_result_json';
+    const META_METHOD       = '_ovcs_upload_method';
 
     public static function init(): void {
         // cron_schedules is registered at file scope (see bottom) so it is
@@ -44,7 +44,7 @@ final class GD_Cloudflare_Stream_Offloader {
         add_action('init', [__CLASS__, 'load_textdomain']);
         add_action('admin_menu', [__CLASS__, 'admin_menu']);
         add_action('admin_init', [__CLASS__, 'register_settings']);
-        add_filter('option_page_capability_gd_cfs_settings', [__CLASS__, 'settings_capability']);
+        add_filter('option_page_capability_ovcs_settings', [__CLASS__, 'settings_capability']);
         add_action('admin_init', [__CLASS__, 'handle_admin_actions']);
         add_action('admin_enqueue_scripts', [__CLASS__, 'admin_assets']);
 
@@ -53,7 +53,7 @@ final class GD_Cloudflare_Stream_Offloader {
         add_filter('render_block', [__CLASS__, 'replace_core_video_block'], 20, 2);
         add_filter('wp_video_shortcode_override', [__CLASS__, 'replace_video_shortcode'], 20, 4);
         add_filter('the_content', [__CLASS__, 'replace_local_video_content'], 99);
-        add_shortcode('gd_cloudflare_stream', [__CLASS__, 'shortcode']);
+        add_shortcode('cloudflare_stream_video', [__CLASS__, 'shortcode']);
 
         add_filter('manage_media_columns', [__CLASS__, 'add_media_column']);
         add_action('manage_media_custom_column', [__CLASS__, 'render_media_column'], 10, 2);
@@ -83,7 +83,7 @@ final class GD_Cloudflare_Stream_Offloader {
 
     public static function ensure_cron_scheduled(): void {
         if (!wp_next_scheduled(self::CRON_HOOK)) {
-            wp_schedule_event(time() + MINUTE_IN_SECONDS, 'gd_cfs_ten_minutes', self::CRON_HOOK);
+            wp_schedule_event(time() + MINUTE_IN_SECONDS, 'ovcs_ten_minutes', self::CRON_HOOK);
         }
     }
 
@@ -133,8 +133,8 @@ final class GD_Cloudflare_Stream_Offloader {
     }
 
     public static function cron_schedules(array $schedules): array {
-        if (!isset($schedules['gd_cfs_ten_minutes'])) {
-            $schedules['gd_cfs_ten_minutes'] = [
+        if (!isset($schedules['ovcs_ten_minutes'])) {
+            $schedules['ovcs_ten_minutes'] = [
                 'interval' => 10 * MINUTE_IN_SECONDS,
                 'display'  => __('Every 10 minutes', 'offload-video-to-cloudflare-stream'),
             ];
@@ -164,19 +164,19 @@ final class GD_Cloudflare_Stream_Offloader {
 
         // Allow the API token to be defined in wp-config.php so the secret
         // never has to live in the database (and in DB backups).
-        if (defined('GD_CFS_API_TOKEN') && GD_CFS_API_TOKEN !== '') {
-            $options['api_token'] = (string) GD_CFS_API_TOKEN;
+        if (defined('OVCS_API_TOKEN') && OVCS_API_TOKEN !== '') {
+            $options['api_token'] = (string) OVCS_API_TOKEN;
         }
 
         return $options;
     }
 
     private static function token_is_constant(): bool {
-        return defined('GD_CFS_API_TOKEN') && GD_CFS_API_TOKEN !== '';
+        return defined('OVCS_API_TOKEN') && OVCS_API_TOKEN !== '';
     }
 
     public static function register_settings(): void {
-        register_setting('gd_cfs_settings', self::OPTION, [
+        register_setting('ovcs_settings', self::OPTION, [
             'sanitize_callback' => [__CLASS__, 'sanitize_options'],
             'type'              => 'array',
         ]);
@@ -264,10 +264,10 @@ final class GD_Cloudflare_Stream_Offloader {
      *
      * This defaults to administrators because the configured token can incur
      * Cloudflare Stream usage and billing. Sites that need a different policy
-     * can adjust it with the gd_cfs_manage_capability filter.
+     * can adjust it with the ovcs_manage_capability filter.
      */
     private static function capability(): string {
-        $capability = apply_filters('gd_cfs_manage_capability', 'manage_options');
+        $capability = apply_filters('ovcs_manage_capability', 'manage_options');
         return is_string($capability) && $capability !== '' ? $capability : 'manage_options';
     }
 
@@ -280,31 +280,31 @@ final class GD_Cloudflare_Stream_Offloader {
             __('Cloudflare Stream', 'offload-video-to-cloudflare-stream'),
             __('Cloudflare Stream', 'offload-video-to-cloudflare-stream'),
             self::capability(),
-            'gd-cloudflare-stream',
+            'offload-video-to-cloudflare-stream',
             [__CLASS__, 'render_admin_page']
         );
     }
 
     public static function admin_assets(string $hook): void {
-        if ($hook !== 'media_page_gd-cloudflare-stream') {
+        if ($hook !== 'media_page_offload-video-to-cloudflare-stream') {
             return;
         }
 
-        wp_register_style('gd-cfs-admin', false, [], self::VERSION);
-        wp_enqueue_style('gd-cfs-admin');
-        wp_add_inline_style('gd-cfs-admin', self::admin_css());
+        wp_register_style('ovcs-admin', false, [], self::VERSION);
+        wp_enqueue_style('ovcs-admin');
+        wp_add_inline_style('ovcs-admin', self::admin_css());
 
-        wp_register_script('gd-cfs-admin', false, [], self::VERSION, true);
-        wp_enqueue_script('gd-cfs-admin');
-        wp_add_inline_script('gd-cfs-admin', self::admin_js());
+        wp_register_script('ovcs-admin', false, [], self::VERSION, true);
+        wp_enqueue_script('ovcs-admin');
+        wp_add_inline_script('ovcs-admin', self::admin_js());
     }
 
     private static function admin_js(): string {
         return implode("\n", [
             "document.addEventListener('click', function (e) {",
             "    var t = e.target;",
-            "    if (t && t.classList && t.classList.contains('gd-cfs-check-all')) {",
-            "        var boxes = document.querySelectorAll('.gd-cfs-table input[type=\"checkbox\"][name=\"attachment_ids[]\"]');",
+            "    if (t && t.classList && t.classList.contains('ovcs-check-all')) {",
+            "        var boxes = document.querySelectorAll('.ovcs-table input[type=\"checkbox\"][name=\"attachment_ids[]\"]');",
             "        boxes.forEach(function (cb) { cb.checked = t.checked; });",
             "    }",
             "});",
@@ -313,45 +313,51 @@ final class GD_Cloudflare_Stream_Offloader {
 
     private static function admin_css(): string {
         return implode("\n", [
-            '.gd-cfs-wrap { max-width: 1280px; }',
-            '.gd-cfs-card { background:#fff; border:1px solid #dcdcde; border-radius:10px; padding:18px 20px; margin:16px 0; box-shadow:0 1px 2px rgba(0,0,0,.03); }',
-            '.gd-cfs-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(320px,420px); gap:18px; align-items:start; }',
-            '.gd-cfs-help { color:#646970; margin-top:4px; }',
-            '.gd-cfs-field { margin:0 0 14px; }',
-            '.gd-cfs-field label { display:block; font-weight:600; margin-bottom:4px; }',
-            '.gd-cfs-field input[type="text"], .gd-cfs-field input[type="password"], .gd-cfs-field textarea { width:100%; max-width:620px; }',
-            '.gd-cfs-badge { display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; line-height:1.5; font-weight:600; background:#f0f0f1; color:#3c434a; }',
-            '.gd-cfs-badge.ready { background:#d1e7dd; color:#0f5132; }',
-            '.gd-cfs-badge.inprogress { background:#fff3cd; color:#664d03; }',
-            '.gd-cfs-badge.error { background:#f8d7da; color:#842029; }',
-            '.gd-cfs-badge.not-uploaded { background:#f0f0f1; color:#50575e; }',
-            '.gd-cfs-table td, .gd-cfs-table th { vertical-align:middle; }',
-            '.gd-cfs-title { font-weight:600; }',
-            '.gd-cfs-small { color:#646970; font-size:12px; }',
-            '.gd-cfs-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0; }',
-            '.gd-cfs-code { font-family:Consolas, Monaco, monospace; background:#f6f7f7; border:1px solid #dcdcde; padding:2px 5px; border-radius:4px; }',
-            '.gd-cfs-thumb { width:96px; max-height:54px; object-fit:cover; background:#f0f0f1; border-radius:4px; }',
-            '.gd-cfs-diagnostics { margin-top:18px; }',
-            '.gd-cfs-test-row { display:flex; align-items:flex-start; gap:9px; padding:8px 0; border-top:1px solid #f0f0f1; }',
-            '.gd-cfs-test-row:first-child { border-top:0; }',
-            '.gd-cfs-light { width:12px; height:12px; border-radius:999px; margin-top:4px; flex:0 0 12px; background:#8c8f94; box-shadow:0 0 0 2px rgba(0,0,0,.04); }',
-            '.gd-cfs-light.ok { background:#00a32a; }',
-            '.gd-cfs-light.warning { background:#dba617; }',
-            '.gd-cfs-light.error { background:#d63638; }',
-            '.gd-cfs-test-title { font-weight:600; }',
-            '.gd-cfs-test-message { color:#50575e; margin-top:2px; }',
-            '.gd-cfs-overall { display:inline-flex; align-items:center; gap:8px; font-weight:600; margin:4px 0 12px; }',
-            '.gd-cfs-overall .gd-cfs-light { margin-top:0; }',
-            '@media (max-width: 1000px) { .gd-cfs-grid { grid-template-columns:1fr; } }',
+            '.ovcs-wrap { max-width: 1280px; }',
+            '.ovcs-plugin-meta { color:#646970; margin:6px 0 18px; font-size:13px; }',
+            '.ovcs-card { background:#fff; border:1px solid #dcdcde; border-radius:10px; padding:18px 20px; margin:16px 0; box-shadow:0 1px 2px rgba(0,0,0,.03); }',
+            '.ovcs-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(320px,420px); gap:18px; align-items:start; }',
+            '.ovcs-help { color:#646970; margin-top:4px; }',
+            '.ovcs-setup-help { background:#f6f7f7; border-left:4px solid #2271b1; padding:12px 14px; margin:10px 0 18px; }',
+            '.ovcs-setup-help h3 { margin-top:0; }',
+            '.ovcs-setup-help summary { cursor:pointer; font-weight:600; font-size:14px; }',
+            '.ovcs-setup-help[open] summary { margin-bottom:8px; }',
+            '.ovcs-setup-help ol { margin-left:20px; }',
+            '.ovcs-field { margin:0 0 14px; }',
+            '.ovcs-field label { display:block; font-weight:600; margin-bottom:4px; }',
+            '.ovcs-field input[type="text"], .ovcs-field input[type="password"], .ovcs-field textarea { width:100%; max-width:620px; }',
+            '.ovcs-badge { display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; line-height:1.5; font-weight:600; background:#f0f0f1; color:#3c434a; }',
+            '.ovcs-badge.ready { background:#d1e7dd; color:#0f5132; }',
+            '.ovcs-badge.inprogress { background:#fff3cd; color:#664d03; }',
+            '.ovcs-badge.error { background:#f8d7da; color:#842029; }',
+            '.ovcs-badge.not-uploaded { background:#f0f0f1; color:#50575e; }',
+            '.ovcs-table td, .ovcs-table th { vertical-align:middle; }',
+            '.ovcs-title { font-weight:600; }',
+            '.ovcs-small { color:#646970; font-size:12px; }',
+            '.ovcs-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0; }',
+            '.ovcs-code { font-family:Consolas, Monaco, monospace; background:#f6f7f7; border:1px solid #dcdcde; padding:2px 5px; border-radius:4px; }',
+            '.ovcs-thumb { width:96px; max-height:54px; object-fit:cover; background:#f0f0f1; border-radius:4px; }',
+            '.ovcs-diagnostics { margin-top:18px; }',
+            '.ovcs-test-row { display:flex; align-items:flex-start; gap:9px; padding:8px 0; border-top:1px solid #f0f0f1; }',
+            '.ovcs-test-row:first-child { border-top:0; }',
+            '.ovcs-light { width:12px; height:12px; border-radius:999px; margin-top:4px; flex:0 0 12px; background:#8c8f94; box-shadow:0 0 0 2px rgba(0,0,0,.04); }',
+            '.ovcs-light.ok { background:#00a32a; }',
+            '.ovcs-light.warning { background:#dba617; }',
+            '.ovcs-light.error { background:#d63638; }',
+            '.ovcs-test-title { font-weight:600; }',
+            '.ovcs-test-message { color:#50575e; margin-top:2px; }',
+            '.ovcs-overall { display:inline-flex; align-items:center; gap:8px; font-weight:600; margin:4px 0 12px; }',
+            '.ovcs-overall .ovcs-light { margin-top:0; }',
+            '@media (max-width: 1000px) { .ovcs-grid { grid-template-columns:1fr; } }',
         ]);
     }
 
     public static function handle_admin_actions(): void {
-        if (!is_admin() || !isset($_GET['page']) || sanitize_key(wp_unslash($_GET['page'])) !== 'gd-cloudflare-stream') {
+        if (!is_admin() || !isset($_GET['page']) || sanitize_key(wp_unslash($_GET['page'])) !== 'offload-video-to-cloudflare-stream') {
             return;
         }
 
-        if (empty($_POST['gd_cfs_action'])) {
+        if (empty($_POST['ovcs_action'])) {
             return;
         }
 
@@ -359,12 +365,18 @@ final class GD_Cloudflare_Stream_Offloader {
             wp_die(esc_html__('You are not allowed to manage Cloudflare Stream settings.', 'offload-video-to-cloudflare-stream'));
         }
 
-        check_admin_referer('gd_cfs_bulk_action', 'gd_cfs_nonce');
+        check_admin_referer('ovcs_bulk_action', 'ovcs_nonce');
 
-        $action = sanitize_key(wp_unslash($_POST['gd_cfs_action']));
+        $action = sanitize_key(wp_unslash($_POST['ovcs_action']));
 
         if ($action === 'connection_test') {
-            self::set_connection_test(self::run_connection_test());
+            $connection_result = self::run_connection_test();
+            self::set_connection_test($connection_result);
+            if (isset($connection_result['overall']) && $connection_result['overall'] === 'ok') {
+                update_user_meta(get_current_user_id(), 'ovcs_setup_help_collapsed', '1');
+            } else {
+                delete_user_meta(get_current_user_id(), 'ovcs_setup_help_collapsed');
+            }
             self::safe_redirect();
         }
 
@@ -405,20 +417,20 @@ final class GD_Cloudflare_Stream_Offloader {
     }
 
     private static function set_notice(array $messages): void {
-        set_transient('gd_cfs_notice_' . get_current_user_id(), $messages, 60);
+        set_transient('ovcs_notice_' . get_current_user_id(), $messages, 60);
     }
 
     private static function set_connection_test(array $result): void {
-        set_transient('gd_cfs_connection_test_' . get_current_user_id(), $result, 30 * MINUTE_IN_SECONDS);
+        set_transient('ovcs_connection_test_' . get_current_user_id(), $result, 30 * MINUTE_IN_SECONDS);
     }
 
     private static function get_connection_test(): ?array {
-        $result = get_transient('gd_cfs_connection_test_' . get_current_user_id());
+        $result = get_transient('ovcs_connection_test_' . get_current_user_id());
         return is_array($result) ? $result : null;
     }
 
     private static function safe_redirect(): void {
-        $url = remove_query_arg(['gd_cfs_notice'], wp_get_referer() ?: admin_url('upload.php?page=gd-cloudflare-stream'));
+        $url = remove_query_arg(['ovcs_notice'], wp_get_referer() ?: admin_url('upload.php?page=offload-video-to-cloudflare-stream'));
         wp_safe_redirect($url);
         exit;
     }
@@ -445,7 +457,7 @@ final class GD_Cloudflare_Stream_Offloader {
 
         $options = self::get_options();
         $paged = isset($_GET['paged']) ? max(1, absint(wp_unslash($_GET['paged']))) : 1;
-        $status_filter = isset($_GET['gd_cfs_status']) ? sanitize_key(wp_unslash($_GET['gd_cfs_status'])) : '';
+        $status_filter = isset($_GET['ovcs_status']) ? sanitize_key(wp_unslash($_GET['ovcs_status'])) : '';
 
         $query_args = [
             'post_type'      => 'attachment',
@@ -480,12 +492,13 @@ final class GD_Cloudflare_Stream_Offloader {
         }
 
         $videos = new WP_Query($query_args);
-        $notice = get_transient('gd_cfs_notice_' . get_current_user_id());
-        delete_transient('gd_cfs_notice_' . get_current_user_id());
+        $notice = get_transient('ovcs_notice_' . get_current_user_id());
+        delete_transient('ovcs_notice_' . get_current_user_id());
 
-        echo '<div class="wrap gd-cfs-wrap">';
+        echo '<div class="wrap ovcs-wrap">';
         echo '<h1>' . esc_html__('Cloudflare Stream Offloader', 'offload-video-to-cloudflare-stream') . '</h1>';
         echo '<p class="description">' . esc_html__('Upload selected WordPress video attachments to Cloudflare Stream and serve ready videos from the Cloudflare Stream player.', 'offload-video-to-cloudflare-stream') . '</p>';
+        echo '<p class="ovcs-plugin-meta">' . sprintf(esc_html__('Version %1$s · Copyright © %2$s Gerald Drißner', 'offload-video-to-cloudflare-stream'), esc_html(self::VERSION), esc_html(gmdate('Y'))) . '</p>';
 
         if (is_array($notice)) {
             foreach ($notice as $item) {
@@ -495,12 +508,12 @@ final class GD_Cloudflare_Stream_Offloader {
             }
         }
 
-        echo '<div class="gd-cfs-grid">';
-        echo '<div class="gd-cfs-card">';
+        echo '<div class="ovcs-grid">';
+        echo '<div class="ovcs-card">';
         self::render_video_table($videos, $status_filter);
         echo '</div>';
 
-        echo '<div class="gd-cfs-card">';
+        echo '<div class="ovcs-card">';
         self::render_settings_box($options);
         echo '</div>';
         echo '</div>';
@@ -509,34 +522,58 @@ final class GD_Cloudflare_Stream_Offloader {
 
     private static function render_settings_box(array $options): void {
         $token_saved = !empty($options['api_token']);
+        $token_docs_url = 'https://developers.cloudflare.com/fundamentals/api/get-started/create-token/';
+        $permissions_docs_url = 'https://developers.cloudflare.com/fundamentals/api/reference/permissions/';
+        $player_docs_url = 'https://developers.cloudflare.com/stream/viewing-videos/using-the-stream-player/';
+
+        $setup_collapsed = get_user_meta(get_current_user_id(), 'ovcs_setup_help_collapsed', true) === '1';
+        $setup_summary = $setup_collapsed
+            ? __('Cloudflare setup checklist — connection successful; click to show instructions', 'offload-video-to-cloudflare-stream')
+            : __('Cloudflare setup checklist', 'offload-video-to-cloudflare-stream');
+
         echo '<h2>' . esc_html__('Settings', 'offload-video-to-cloudflare-stream') . '</h2>';
+        echo '<details class="ovcs-setup-help"' . ($setup_collapsed ? '' : ' open') . '>';
+        echo '<summary>' . esc_html($setup_summary) . '</summary>';
+        echo '<ol>';
+        echo '<li>' . esc_html__('Open Cloudflare Dashboard → Manage Account → API Tokens and create a custom token.', 'offload-video-to-cloudflare-stream') . '</li>';
+        echo '<li>' . esc_html__('Set the token permission to Account → Stream → Edit. In some Cloudflare screens this is shown as Account → Stream → Write. Scope the token to the one Cloudflare account used for Stream.', 'offload-video-to-cloudflare-stream') . '</li>';
+        echo '<li>' . esc_html__('Copy the token immediately after creation. Cloudflare only shows the token secret once.', 'offload-video-to-cloudflare-stream') . '</li>';
+        echo '<li>' . esc_html__('For playback, open Cloudflare Stream → Videos, copy any video embed code, and paste either the full iframe or the customer-CODE.cloudflarestream.com value into the Customer Code field below.', 'offload-video-to-cloudflare-stream') . '</li>';
+        echo '</ol>';
+        echo '<p class="ovcs-help">' . esc_html__('The plugin does not need DNS, Zone, Workers, Cache Purge, or Global API Key permissions.', 'offload-video-to-cloudflare-stream') . '</p>';
+        echo '<p class="ovcs-help"><a href="' . esc_url($token_docs_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Cloudflare token creation guide', 'offload-video-to-cloudflare-stream') . '</a> &nbsp;|&nbsp; <a href="' . esc_url($permissions_docs_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Cloudflare token permission reference', 'offload-video-to-cloudflare-stream') . '</a> &nbsp;|&nbsp; <a href="' . esc_url($player_docs_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Cloudflare Stream player and Customer Code guide', 'offload-video-to-cloudflare-stream') . '</a></p>';
+        echo '</details>';
+
         echo '<form method="post" action="options.php">';
-        settings_fields('gd_cfs_settings');
+        settings_fields('ovcs_settings');
 
-        echo '<div class="gd-cfs-field"><label for="gd_cfs_account_id">' . esc_html__('Cloudflare Account ID', 'offload-video-to-cloudflare-stream') . '</label>';
-        echo '<input id="gd_cfs_account_id" type="text" name="' . esc_attr(self::OPTION) . '[account_id]" value="' . esc_attr($options['account_id']) . '" autocomplete="off"></div>';
+        echo '<div class="ovcs-field"><label for="ovcs_account_id">' . esc_html__('Cloudflare Account ID', 'offload-video-to-cloudflare-stream') . '</label>';
+        echo '<input id="ovcs_account_id" type="text" name="' . esc_attr(self::OPTION) . '[account_id]" value="' . esc_attr($options['account_id']) . '" autocomplete="off">';
+        echo '<p class="ovcs-help">' . esc_html__('Use the Account ID of the Cloudflare account where Stream is enabled. It is usually a 32-character value shown in the dashboard URL and account overview.', 'offload-video-to-cloudflare-stream') . '</p></div>';
 
-        echo '<div class="gd-cfs-field"><label for="gd_cfs_api_token">' . esc_html__('Cloudflare API Token', 'offload-video-to-cloudflare-stream') . '</label>';
+        echo '<div class="ovcs-field"><label for="ovcs_api_token">' . esc_html__('Cloudflare API Token', 'offload-video-to-cloudflare-stream') . '</label>';
         if (self::token_is_constant()) {
-            echo '<input id="gd_cfs_api_token" type="password" value="" autocomplete="new-password" placeholder="' . esc_attr__('Defined in wp-config.php via GD_CFS_API_TOKEN', 'offload-video-to-cloudflare-stream') . '" disabled>';
-            echo '<p class="gd-cfs-help">' . esc_html__('The API token is set by the GD_CFS_API_TOKEN constant in wp-config.php and is not stored in the database.', 'offload-video-to-cloudflare-stream') . '</p></div>';
+            echo '<input id="ovcs_api_token" type="password" value="" autocomplete="new-password" placeholder="' . esc_attr__('Defined in wp-config.php via OVCS_API_TOKEN', 'offload-video-to-cloudflare-stream') . '" disabled>';
+            echo '<p class="ovcs-help">' . esc_html__('The API token is set by the OVCS_API_TOKEN constant in wp-config.php and is not stored in the database.', 'offload-video-to-cloudflare-stream') . '</p></div>';
         } else {
-            echo '<input id="gd_cfs_api_token" type="password" name="' . esc_attr(self::OPTION) . '[api_token]" value="" autocomplete="new-password" placeholder="' . esc_attr($token_saved ? __('Token saved — leave blank to keep it', 'offload-video-to-cloudflare-stream') : __('Paste a Stream Write API token', 'offload-video-to-cloudflare-stream')) . '">';
-            echo '<p class="gd-cfs-help">' . esc_html__('Use a scoped Cloudflare API token with Stream Write permission for uploads and status checks.', 'offload-video-to-cloudflare-stream') . '</p></div>';
+            echo '<input id="ovcs_api_token" type="password" name="' . esc_attr(self::OPTION) . '[api_token]" value="" autocomplete="new-password" placeholder="' . esc_attr($token_saved ? __('Token saved — leave blank to keep it', 'offload-video-to-cloudflare-stream') : __('Paste a token with Account → Stream → Edit/Write', 'offload-video-to-cloudflare-stream')) . '">';
+            echo '<p class="ovcs-help"><strong>' . esc_html__('Required permission:', 'offload-video-to-cloudflare-stream') . '</strong> ' . esc_html__('Account → Stream → Edit. If your Cloudflare dashboard uses the newer label, choose Account → Stream → Write. Restrict Account Resources to the selected account.', 'offload-video-to-cloudflare-stream') . '</p>';
+            echo '<p class="ovcs-help">' . esc_html__('For better security, define OVCS_API_TOKEN in wp-config.php instead of storing the token in the WordPress database.', 'offload-video-to-cloudflare-stream') . '</p></div>';
         }
 
-        echo '<div class="gd-cfs-field"><label for="gd_cfs_customer_code">' . esc_html__('Cloudflare Stream Customer Code', 'offload-video-to-cloudflare-stream') . '</label>';
-        echo '<input id="gd_cfs_customer_code" type="text" name="' . esc_attr(self::OPTION) . '[customer_code]" value="' . esc_attr($options['customer_code']) . '" autocomplete="off">';
-        echo '<p class="gd-cfs-help">' . esc_html__('This is the code used in Stream iframe URLs: customer-CODE.cloudflarestream.com. You may paste the bare code, the customer subdomain, the iframe URL, or the full iframe snippet; the plugin will extract the code on save.', 'offload-video-to-cloudflare-stream') . '</p></div>';
+        echo '<div class="ovcs-field"><label for="ovcs_customer_code">' . esc_html__('Cloudflare Stream Customer Code', 'offload-video-to-cloudflare-stream') . '</label>';
+        echo '<input id="ovcs_customer_code" type="text" name="' . esc_attr(self::OPTION) . '[customer_code]" value="' . esc_attr($options['customer_code']) . '" autocomplete="off" placeholder="' . esc_attr__('Example: qa5278df5riidxii', 'offload-video-to-cloudflare-stream') . '">';
+        echo '<p class="ovcs-help"><strong>' . esc_html__('Where to find it:', 'offload-video-to-cloudflare-stream') . '</strong> ' . esc_html__('Cloudflare Dashboard → Stream → Videos → open any video → copy the embed code. The Customer Code is the CODE in customer-CODE.cloudflarestream.com.', 'offload-video-to-cloudflare-stream') . '</p>';
+        echo '<p class="ovcs-help">' . esc_html__('You may paste the bare code, the customer subdomain, the iframe URL, or the full iframe snippet. The plugin extracts the code on save.', 'offload-video-to-cloudflare-stream') . '</p></div>';
 
-        echo '<div class="gd-cfs-field"><label for="gd_cfs_allowed_origins">' . esc_html__('Allowed origins', 'offload-video-to-cloudflare-stream') . '</label>';
-        echo '<textarea id="gd_cfs_allowed_origins" name="' . esc_attr(self::OPTION) . '[allowed_origins]" rows="4" placeholder="drissner.media&#10;pochemuchka-books.com&#10;64.place">' . esc_textarea($options['allowed_origins']) . '</textarea>';
-        echo '<p class="gd-cfs-help">' . esc_html__('Optional. One hostname per line. Leave empty if you do not want Cloudflare origin restrictions for uploaded videos.', 'offload-video-to-cloudflare-stream') . '</p></div>';
+        echo '<div class="ovcs-field"><label for="ovcs_allowed_origins">' . esc_html__('Allowed origins', 'offload-video-to-cloudflare-stream') . '</label>';
+        echo '<textarea id="ovcs_allowed_origins" name="' . esc_attr(self::OPTION) . '[allowed_origins]" rows="4" placeholder="drissner.media&#10;pochemuchka-books.com&#10;64.place">' . esc_textarea($options['allowed_origins']) . '</textarea>';
+        echo '<p class="ovcs-help">' . esc_html__('Optional. One hostname per line. Leave empty if you do not want Cloudflare origin restrictions for uploaded videos.', 'offload-video-to-cloudflare-stream') . '</p></div>';
 
-        echo '<div class="gd-cfs-field"><label><input type="checkbox" name="' . esc_attr(self::OPTION) . '[auto_replace_blocks]" value="1" ' . checked(1, (int) $options['auto_replace_blocks'], false) . '> ' . esc_html__('Automatically replace Gutenberg video blocks when a Stream UID exists', 'offload-video-to-cloudflare-stream') . '</label></div>';
-        echo '<div class="gd-cfs-field"><label><input type="checkbox" name="' . esc_attr(self::OPTION) . '[auto_replace_shortcode]" value="1" ' . checked(1, (int) $options['auto_replace_shortcode'], false) . '> ' . esc_html__('Automatically replace WordPress [video] shortcodes when a Stream UID exists', 'offload-video-to-cloudflare-stream') . '</label></div>';
-        echo '<div class="gd-cfs-field"><label><input type="checkbox" name="' . esc_attr(self::OPTION) . '[auto_replace_html]" value="1" ' . checked(1, (int) $options['auto_replace_html'], false) . '> ' . esc_html__('Automatically replace local video HTML and video-file links when a Stream UID exists', 'offload-video-to-cloudflare-stream') . '</label>';
-        echo '<p class="gd-cfs-help">' . esc_html__('This catches classic-editor video tags, core/video blocks without an attachment ID, and direct links to local video files. It only replaces media that already has a saved Cloudflare Stream UID.', 'offload-video-to-cloudflare-stream') . '</p></div>';
+        echo '<div class="ovcs-field"><label><input type="checkbox" name="' . esc_attr(self::OPTION) . '[auto_replace_blocks]" value="1" ' . checked(1, (int) $options['auto_replace_blocks'], false) . '> ' . esc_html__('Automatically replace Gutenberg video blocks when a Stream UID exists', 'offload-video-to-cloudflare-stream') . '</label></div>';
+        echo '<div class="ovcs-field"><label><input type="checkbox" name="' . esc_attr(self::OPTION) . '[auto_replace_shortcode]" value="1" ' . checked(1, (int) $options['auto_replace_shortcode'], false) . '> ' . esc_html__('Automatically replace WordPress [video] shortcodes when a Stream UID exists', 'offload-video-to-cloudflare-stream') . '</label></div>';
+        echo '<div class="ovcs-field"><label><input type="checkbox" name="' . esc_attr(self::OPTION) . '[auto_replace_html]" value="1" ' . checked(1, (int) $options['auto_replace_html'], false) . '> ' . esc_html__('Automatically replace local video HTML and video-file links when a Stream UID exists', 'offload-video-to-cloudflare-stream') . '</label>';
+        echo '<p class="ovcs-help">' . esc_html__('This catches classic-editor video tags, core/video blocks without an attachment ID, and direct links to local video files. It only replaces media that already has a saved Cloudflare Stream UID.', 'offload-video-to-cloudflare-stream') . '</p></div>';
 
         submit_button(__('Save settings', 'offload-video-to-cloudflare-stream'));
         echo '</form>';
@@ -545,25 +582,25 @@ final class GD_Cloudflare_Stream_Offloader {
 
         echo '<hr>';
         echo '<h3>' . esc_html__('Shortcode', 'offload-video-to-cloudflare-stream') . '</h3>';
-        echo '<p><code>[gd_cloudflare_stream id="123"]</code> &nbsp; ' . esc_html__('or', 'offload-video-to-cloudflare-stream') . ' &nbsp; <code>[gd_cloudflare_stream uid="VIDEO_UID"]</code></p>';
-        echo '<p class="gd-cfs-help">' . esc_html__('Use the WordPress attachment ID from the Media Library table, or use a Cloudflare Stream UID. The shortcode requires the Cloudflare Stream Customer Code setting to generate the official iframe URL.', 'offload-video-to-cloudflare-stream') . '</p>';
+        echo '<p><code>[cloudflare_stream_video id="123"]</code> &nbsp; ' . esc_html__('or', 'offload-video-to-cloudflare-stream') . ' &nbsp; <code>[cloudflare_stream_video uid="VIDEO_UID"]</code></p>';
+        echo '<p class="ovcs-help">' . esc_html__('Use the WordPress attachment ID from the Media Library table, or use a Cloudflare Stream UID. The shortcode requires the Cloudflare Stream Customer Code setting to generate the official iframe URL.', 'offload-video-to-cloudflare-stream') . '</p>';
     }
 
     private static function render_connection_test_box(): void {
         $result = self::get_connection_test();
 
-        echo '<div class="gd-cfs-diagnostics">';
+        echo '<div class="ovcs-diagnostics">';
         echo '<hr>';
         echo '<h3>' . esc_html__('Connection test', 'offload-video-to-cloudflare-stream') . '</h3>';
-        echo '<p class="gd-cfs-help">' . esc_html__('Runs non-destructive Cloudflare API checks: token verification, account Stream access, playback Customer Code, and allowed-origin sanity checks. It does not upload a test video.', 'offload-video-to-cloudflare-stream') . '</p>';
+        echo '<p class="ovcs-help">' . esc_html__('Runs non-destructive Cloudflare API checks: token verification, account Stream access, playback Customer Code, and allowed-origin sanity checks. It does not upload a test video.', 'offload-video-to-cloudflare-stream') . '</p>';
 
         if (is_array($result)) {
             $overall = isset($result['overall']) ? (string) $result['overall'] : 'warning';
             $label = isset($result['label']) ? (string) $result['label'] : __('Connection test completed', 'offload-video-to-cloudflare-stream');
-            echo '<div class="gd-cfs-overall"><span class="gd-cfs-light ' . esc_attr(sanitize_html_class($overall)) . '"></span><span>' . esc_html($label) . '</span></div>';
+            echo '<div class="ovcs-overall"><span class="ovcs-light ' . esc_attr(sanitize_html_class($overall)) . '"></span><span>' . esc_html($label) . '</span></div>';
 
             if (!empty($result['checked_at'])) {
-                echo '<p class="gd-cfs-small">' . esc_html(sprintf(__('Last checked: %s', 'offload-video-to-cloudflare-stream'), (string) $result['checked_at'])) . '</p>';
+                echo '<p class="ovcs-small">' . esc_html(sprintf(__('Last checked: %s', 'offload-video-to-cloudflare-stream'), (string) $result['checked_at'])) . '</p>';
             }
 
             if (!empty($result['items']) && is_array($result['items'])) {
@@ -571,20 +608,20 @@ final class GD_Cloudflare_Stream_Offloader {
                     $status = isset($item['status']) ? sanitize_html_class((string) $item['status']) : 'warning';
                     $title = isset($item['title']) ? (string) $item['title'] : '';
                     $message = isset($item['message']) ? (string) $item['message'] : '';
-                    echo '<div class="gd-cfs-test-row"><span class="gd-cfs-light ' . esc_attr($status) . '"></span><div><div class="gd-cfs-test-title">' . esc_html($title) . '</div>';
+                    echo '<div class="ovcs-test-row"><span class="ovcs-light ' . esc_attr($status) . '"></span><div><div class="ovcs-test-title">' . esc_html($title) . '</div>';
                     if ($message !== '') {
-                        echo '<div class="gd-cfs-test-message">' . esc_html($message) . '</div>';
+                        echo '<div class="ovcs-test-message">' . esc_html($message) . '</div>';
                     }
                     echo '</div></div>';
                 }
             }
         } else {
-            echo '<div class="gd-cfs-overall"><span class="gd-cfs-light"></span><span>' . esc_html__('Not tested yet', 'offload-video-to-cloudflare-stream') . '</span></div>';
+            echo '<div class="ovcs-overall"><span class="ovcs-light"></span><span>' . esc_html__('Not tested yet', 'offload-video-to-cloudflare-stream') . '</span></div>';
         }
 
         echo '<form method="post">';
-        wp_nonce_field('gd_cfs_bulk_action', 'gd_cfs_nonce');
-        echo '<input type="hidden" name="gd_cfs_action" value="connection_test">';
+        wp_nonce_field('ovcs_bulk_action', 'ovcs_nonce');
+        echo '<input type="hidden" name="ovcs_action" value="connection_test">';
         submit_button(__('Test Cloudflare connection', 'offload-video-to-cloudflare-stream'), 'secondary', 'submit', false);
         echo '</form>';
         echo '</div>';
@@ -618,7 +655,7 @@ final class GD_Cloudflare_Stream_Offloader {
         }
 
         if ($api_token === '') {
-            $add('error', __('API token', 'offload-video-to-cloudflare-stream'), __('Missing API token. Add it in the settings or define GD_CFS_API_TOKEN in wp-config.php.', 'offload-video-to-cloudflare-stream'));
+            $add('error', __('API token', 'offload-video-to-cloudflare-stream'), __('Missing API token. Add it in the settings or define OVCS_API_TOKEN in wp-config.php.', 'offload-video-to-cloudflare-stream'));
         } else {
             $verify = self::api_request_absolute('GET', 'https://api.cloudflare.com/client/v4/user/tokens/verify');
             if (!empty($verify['ok'])) {
@@ -683,7 +720,7 @@ final class GD_Cloudflare_Stream_Offloader {
     }
 
     private static function render_video_table(WP_Query $videos, string $status_filter): void {
-        $base_url = admin_url('upload.php?page=gd-cloudflare-stream');
+        $base_url = admin_url('upload.php?page=offload-video-to-cloudflare-stream');
         $filters = [
             ''             => __('All videos', 'offload-video-to-cloudflare-stream'),
             'not_uploaded' => __('Not uploaded', 'offload-video-to-cloudflare-stream'),
@@ -693,12 +730,12 @@ final class GD_Cloudflare_Stream_Offloader {
         ];
 
         echo '<h2>' . esc_html__('Video Library', 'offload-video-to-cloudflare-stream') . '</h2>';
-        echo '<p class="gd-cfs-help">' . esc_html__('Select existing WordPress video attachments and upload them to Cloudflare Stream. Cloudflare will fetch the public media URL.', 'offload-video-to-cloudflare-stream') . '</p>';
+        echo '<p class="ovcs-help">' . esc_html__('Select existing WordPress video attachments and upload them to Cloudflare Stream. Cloudflare will fetch the public media URL.', 'offload-video-to-cloudflare-stream') . '</p>';
 
         echo '<p class="subsubsub">';
         $links = [];
         foreach ($filters as $key => $label) {
-            $url = $key === '' ? $base_url : add_query_arg('gd_cfs_status', $key, $base_url);
+            $url = $key === '' ? $base_url : add_query_arg('ovcs_status', $key, $base_url);
             $class = $key === $status_filter ? ' class="current"' : '';
             $links[] = '<a href="' . esc_url($url) . '"' . $class . '>' . esc_html($label) . '</a>';
         }
@@ -706,17 +743,17 @@ final class GD_Cloudflare_Stream_Offloader {
         echo '</p><div style="clear:both"></div>';
 
         echo '<form method="post">';
-        wp_nonce_field('gd_cfs_bulk_action', 'gd_cfs_nonce');
-        echo '<div class="gd-cfs-actions">';
-        echo '<button class="button button-primary" name="gd_cfs_action" value="upload">' . esc_html__('Upload selected', 'offload-video-to-cloudflare-stream') . '</button>';
-        echo '<button class="button" name="gd_cfs_action" value="refresh">' . esc_html__('Refresh selected status', 'offload-video-to-cloudflare-stream') . '</button>';
-        echo '<button class="button" name="gd_cfs_action" value="force_upload" onclick="return confirm(\'' . esc_js(__('This will create a new Cloudflare Stream copy for selected videos even if they already have a UID. Continue?', 'offload-video-to-cloudflare-stream')) . '\');">' . esc_html__('Force re-upload selected', 'offload-video-to-cloudflare-stream') . '</button>';
-        echo '<button class="button" name="gd_cfs_action" value="clear" onclick="return confirm(\'' . esc_js(__('This only clears local WordPress Stream metadata. It does not delete videos from Cloudflare. Continue?', 'offload-video-to-cloudflare-stream')) . '\');">' . esc_html__('Clear local Stream metadata', 'offload-video-to-cloudflare-stream') . '</button>';
+        wp_nonce_field('ovcs_bulk_action', 'ovcs_nonce');
+        echo '<div class="ovcs-actions">';
+        echo '<button class="button button-primary" name="ovcs_action" value="upload">' . esc_html__('Upload selected', 'offload-video-to-cloudflare-stream') . '</button>';
+        echo '<button class="button" name="ovcs_action" value="refresh">' . esc_html__('Refresh selected status', 'offload-video-to-cloudflare-stream') . '</button>';
+        echo '<button class="button" name="ovcs_action" value="force_upload" onclick="return confirm(\'' . esc_js(__('This will create a new Cloudflare Stream copy for selected videos even if they already have a UID. Continue?', 'offload-video-to-cloudflare-stream')) . '\');">' . esc_html__('Force re-upload selected', 'offload-video-to-cloudflare-stream') . '</button>';
+        echo '<button class="button" name="ovcs_action" value="clear" onclick="return confirm(\'' . esc_js(__('This only clears local WordPress Stream metadata. It does not delete videos from Cloudflare. Continue?', 'offload-video-to-cloudflare-stream')) . '\');">' . esc_html__('Clear local Stream metadata', 'offload-video-to-cloudflare-stream') . '</button>';
         echo '</div>';
 
-        echo '<table class="widefat striped gd-cfs-table">';
+        echo '<table class="widefat striped ovcs-table">';
         echo '<thead><tr>';
-        echo '<td class="manage-column column-cb check-column"><input type="checkbox" class="gd-cfs-check-all"></td>';
+        echo '<td class="manage-column column-cb check-column"><input type="checkbox" class="ovcs-check-all"></td>';
         echo '<th>' . esc_html__('Video', 'offload-video-to-cloudflare-stream') . '</th>';
         echo '<th>' . esc_html__('Local file', 'offload-video-to-cloudflare-stream') . '</th>';
         echo '<th>' . esc_html__('Cloudflare Stream', 'offload-video-to-cloudflare-stream') . '</th>';
@@ -732,16 +769,16 @@ final class GD_Cloudflare_Stream_Offloader {
         }
 
         echo '</tbody></table>';
-        echo '<div class="gd-cfs-actions">';
-        echo '<button class="button button-primary" name="gd_cfs_action" value="upload">' . esc_html__('Upload selected', 'offload-video-to-cloudflare-stream') . '</button>';
-        echo '<button class="button" name="gd_cfs_action" value="refresh">' . esc_html__('Refresh selected status', 'offload-video-to-cloudflare-stream') . '</button>';
+        echo '<div class="ovcs-actions">';
+        echo '<button class="button button-primary" name="ovcs_action" value="upload">' . esc_html__('Upload selected', 'offload-video-to-cloudflare-stream') . '</button>';
+        echo '<button class="button" name="ovcs_action" value="refresh">' . esc_html__('Refresh selected status', 'offload-video-to-cloudflare-stream') . '</button>';
         echo '</div>';
         echo '</form>';
 
         $total_pages = max(1, (int) $videos->max_num_pages);
         if ($total_pages > 1) {
             $pagination = paginate_links([
-                'base'      => add_query_arg('paged', '%#%', $base_url . ($status_filter ? '&gd_cfs_status=' . rawurlencode($status_filter) : '')),
+                'base'      => add_query_arg('paged', '%#%', $base_url . ($status_filter ? '&ovcs_status=' . rawurlencode($status_filter) : '')),
                 'format'    => '',
                 'current'   => isset($_GET['paged']) ? max(1, absint(wp_unslash($_GET['paged']))) : 1,
                 'total'     => $total_pages,
@@ -767,31 +804,31 @@ final class GD_Cloudflare_Stream_Offloader {
         echo '<th scope="row" class="check-column"><input type="checkbox" name="attachment_ids[]" value="' . esc_attr((string) $id) . '"></th>';
         echo '<td>';
         if ($thumbnail) {
-            echo '<img class="gd-cfs-thumb" src="' . esc_url($thumbnail) . '" alt=""> ';
+            echo '<img class="ovcs-thumb" src="' . esc_url($thumbnail) . '" alt=""> ';
         }
-        echo '<div class="gd-cfs-title"><a href="' . esc_url($edit_link ?: '#') . '">' . esc_html(get_the_title($id) ?: basename((string) $url)) . '</a></div>';
-        echo '<div class="gd-cfs-small">ID ' . esc_html((string) $id) . ' · ' . esc_html(get_post_mime_type($id) ?: '') . '</div>';
+        echo '<div class="ovcs-title"><a href="' . esc_url($edit_link ?: '#') . '">' . esc_html(get_the_title($id) ?: basename((string) $url)) . '</a></div>';
+        echo '<div class="ovcs-small">ID ' . esc_html((string) $id) . ' · ' . esc_html(get_post_mime_type($id) ?: '') . '</div>';
         echo '</td>';
         echo '<td>';
         if ($url) {
             echo '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html__('Open local file', 'offload-video-to-cloudflare-stream') . '</a>';
         }
         if ($size) {
-            echo '<div class="gd-cfs-small">' . esc_html($size) . '</div>';
+            echo '<div class="ovcs-small">' . esc_html($size) . '</div>';
         }
         echo '</td>';
         echo '<td>' . wp_kses_post($status_html);
         if ($uid) {
-            echo '<div class="gd-cfs-small">UID: <span class="gd-cfs-code">' . esc_html($uid) . '</span></div>';
+            echo '<div class="ovcs-small">UID: <span class="ovcs-code">' . esc_html($uid) . '</span></div>';
         }
         $error = (string) get_post_meta($id, self::META_ERROR, true);
         if ($error) {
-            echo '<div class="gd-cfs-small">' . esc_html($error) . '</div>';
+            echo '<div class="ovcs-small">' . esc_html($error) . '</div>';
         }
         echo '</td>';
-        echo '<td><code>[gd_cloudflare_stream id=&quot;' . esc_html((string) $id) . '&quot;]</code>';
+        echo '<td><code>[cloudflare_stream_video id=&quot;' . esc_html((string) $id) . '&quot;]</code>';
         if ($uid) {
-            echo '<div class="gd-cfs-small"><code>[gd_cloudflare_stream uid=&quot;' . esc_html($uid) . '&quot;]</code></div>';
+            echo '<div class="ovcs-small"><code>[cloudflare_stream_video uid=&quot;' . esc_html($uid) . '&quot;]</code></div>';
         }
         echo '</td>';
         echo '</tr>';
@@ -800,7 +837,7 @@ final class GD_Cloudflare_Stream_Offloader {
     private static function status_badge(int $attachment_id): string {
         $uid = (string) get_post_meta($attachment_id, self::META_UID, true);
         if ($uid === '') {
-            return '<span class="gd-cfs-badge not-uploaded">' . esc_html__('Not uploaded', 'offload-video-to-cloudflare-stream') . '</span>';
+            return '<span class="ovcs-badge not-uploaded">' . esc_html__('Not uploaded', 'offload-video-to-cloudflare-stream') . '</span>';
         }
 
         $ready = (string) get_post_meta($attachment_id, self::META_READY, true) === '1';
@@ -808,17 +845,17 @@ final class GD_Cloudflare_Stream_Offloader {
         $pct = (string) get_post_meta($attachment_id, self::META_PCT, true);
 
         if ($ready) {
-            return '<span class="gd-cfs-badge ready">' . esc_html__('Ready', 'offload-video-to-cloudflare-stream') . '</span>';
+            return '<span class="ovcs-badge ready">' . esc_html__('Ready', 'offload-video-to-cloudflare-stream') . '</span>';
         }
         if ($state === 'error') {
-            return '<span class="gd-cfs-badge error">' . esc_html__('Error', 'offload-video-to-cloudflare-stream') . '</span>';
+            return '<span class="ovcs-badge error">' . esc_html__('Error', 'offload-video-to-cloudflare-stream') . '</span>';
         }
 
         $label = $state ? ucfirst($state) : __('Processing', 'offload-video-to-cloudflare-stream');
         if ($pct !== '') {
             $label .= ' ' . $pct . '%';
         }
-        return '<span class="gd-cfs-badge inprogress">' . esc_html($label) . '</span>';
+        return '<span class="ovcs-badge inprogress">' . esc_html($label) . '</span>';
     }
 
     private static function is_configured(): bool {
@@ -1096,7 +1133,7 @@ final class GD_Cloudflare_Stream_Offloader {
             return ['ok' => false, 'message' => __('Could not read local file for upload.', 'offload-video-to-cloudflare-stream')];
         }
 
-        $boundary = 'gdcfs' . wp_generate_password(20, false);
+        $boundary = 'ovcs' . wp_generate_password(20, false);
         $eol = "\r\n";
         $filename = str_replace(["\r", "\n", '"'], '_', basename($file));
         $mime = preg_replace('/[^a-z0-9+_.\/-]/i', '', (string) (get_post_mime_type($attachment_id) ?: 'application/octet-stream'));
@@ -1331,7 +1368,7 @@ final class GD_Cloudflare_Stream_Offloader {
 
     private static function replace_video_html_fragment(string $html): string {
         // Never touch Cloudflare Stream embeds or a player we already generated.
-        if (stripos($html, 'cloudflarestream.com') !== false || stripos($html, 'gd-cfs-player') !== false) {
+        if (stripos($html, 'cloudflarestream.com') !== false || stripos($html, 'ovcs-player') !== false) {
             return $html;
         }
 
@@ -1431,9 +1468,9 @@ final class GD_Cloudflare_Stream_Offloader {
             'video'         => '',
             'title'         => '',
             'aspect'        => '16/9',
-        ], $raw_atts, 'gd_cloudflare_stream');
+        ], $raw_atts, 'cloudflare_stream_video');
 
-        // Support shorthand such as [gd_cloudflare_stream 123] if WordPress
+        // Support shorthand such as [cloudflare_stream_video 123] if WordPress
         // passes the first unnamed value as $atts[0].
         $unnamed = isset($raw_atts[0]) && is_scalar($raw_atts[0]) ? trim((string) $raw_atts[0]) : '';
 
@@ -1505,7 +1542,7 @@ final class GD_Cloudflare_Stream_Offloader {
         $src = 'https://customer-' . rawurlencode($customer_code) . '.cloudflarestream.com/' . rawurlencode($uid) . '/iframe';
 
         return sprintf(
-            '<div class="gd-cfs-player" style="position:relative;width:100%%;padding-top:%1$s;"><iframe src="%2$s" title="%3$s" loading="lazy" style="border:0;position:absolute;top:0;left:0;width:100%%;height:100%%;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe></div>',
+            '<div class="ovcs-player" style="position:relative;width:100%%;padding-top:%1$s;"><iframe src="%2$s" title="%3$s" loading="lazy" style="border:0;position:absolute;top:0;left:0;width:100%%;height:100%%;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe></div>',
             esc_attr($padding_top),
             esc_url($src),
             esc_attr($title)
@@ -1532,7 +1569,7 @@ final class GD_Cloudflare_Stream_Offloader {
             return '';
         }
 
-        return '<div class="gd-cfs-player gd-cfs-player-notice" style="border:1px solid #d63638;padding:12px;margin:12px 0;background:#fff8f8;color:#1d2327;font-size:14px;line-height:1.45;">' . esc_html($message) . '</div>';
+        return '<div class="ovcs-player ovcs-player-notice" style="border:1px solid #d63638;padding:12px;margin:12px 0;background:#fff8f8;color:#1d2327;font-size:14px;line-height:1.45;">' . esc_html($message) . '</div>';
     }
 
     public static function is_video_attachment(int $attachment_id): bool {
@@ -1544,7 +1581,7 @@ final class GD_Cloudflare_Stream_Offloader {
     }
 
     public static function add_media_column(array $columns): array {
-        $columns['gd_cfs_status'] = __('Cloudflare Stream', 'offload-video-to-cloudflare-stream');
+        $columns['ovcs_status'] = __('Cloudflare Stream', 'offload-video-to-cloudflare-stream');
         return $columns;
     }
 
@@ -1552,13 +1589,13 @@ final class GD_Cloudflare_Stream_Offloader {
      * Add a "Settings" link on the Plugins list row.
      */
     public static function plugin_action_links(array $links): array {
-        $settings = '<a href="' . esc_url(admin_url('upload.php?page=gd-cloudflare-stream')) . '">' . esc_html__('Settings', 'offload-video-to-cloudflare-stream') . '</a>';
+        $settings = '<a href="' . esc_url(admin_url('upload.php?page=offload-video-to-cloudflare-stream')) . '">' . esc_html__('Settings', 'offload-video-to-cloudflare-stream') . '</a>';
         array_unshift($links, $settings);
         return $links;
     }
 
     public static function render_media_column(string $column_name, int $post_id): void {
-        if ($column_name !== 'gd_cfs_status') {
+        if ($column_name !== 'ovcs_status') {
             return;
         }
         if (!self::is_video_attachment($post_id)) {
@@ -1569,10 +1606,10 @@ final class GD_Cloudflare_Stream_Offloader {
     }
 }
 
-GD_Cloudflare_Stream_Offloader::init();
+Offload_Video_To_Cloudflare_Stream::init();
 // Registered at file scope (not inside init()) so the custom interval exists
 // during activation regardless of hook timing.
-add_filter('cron_schedules', ['GD_Cloudflare_Stream_Offloader', 'cron_schedules']);
-add_filter('plugin_action_links_' . plugin_basename(__FILE__), ['GD_Cloudflare_Stream_Offloader', 'plugin_action_links']);
-register_activation_hook(__FILE__, ['GD_Cloudflare_Stream_Offloader', 'activate']);
-register_deactivation_hook(__FILE__, ['GD_Cloudflare_Stream_Offloader', 'deactivate']);
+add_filter('cron_schedules', ['Offload_Video_To_Cloudflare_Stream', 'cron_schedules']);
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), ['Offload_Video_To_Cloudflare_Stream', 'plugin_action_links']);
+register_activation_hook(__FILE__, ['Offload_Video_To_Cloudflare_Stream', 'activate']);
+register_deactivation_hook(__FILE__, ['Offload_Video_To_Cloudflare_Stream', 'deactivate']);
