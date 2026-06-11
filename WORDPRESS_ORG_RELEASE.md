@@ -1,6 +1,6 @@
 # WordPress.org release checklist
 
-1. Confirm `offload-video-to-cloudflare-stream/readme.txt` passes the WordPress.org readme validator.
+1. Confirm `voffload-cloudflare-stream/readme.txt` passes the WordPress.org readme validator.
 2. Confirm the main plugin header version and `Stable tag` match.
 3. Commit the same code to SVN `trunk`.
 4. Create a tag from trunk, for example:

@@ -1,5 +1,5 @@
 {
-  "name": "gerald-drissner/offload-video-to-cloudflare-stream",
+  "name": "voffload/voffload-cloudflare-stream",
   "description": "Upload WordPress video attachments to Cloudflare Stream and serve them through the Cloudflare Stream player.",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
@@ -7,6 +7,6 @@
     "php": ">=8.1"
   },
   "scripts": {
-    "lint:php": "find offload-video-to-cloudflare-stream -name '*.php' -print0 | xargs -0 -n1 php -l"
+    "lint:php": "find voffload-cloudflare-stream -name '*.php' -print0 | xargs -0 -n1 php -l"
   }
 }

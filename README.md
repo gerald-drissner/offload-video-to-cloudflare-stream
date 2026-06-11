@@ -1,4 +1,4 @@
-# Offload Video to Cloudflare Stream
+# Voffload for Cloudflare Stream
 
 WordPress plugin that uploads existing Media Library video attachments to Cloudflare Stream and serves ready videos through the Cloudflare Stream player.
 
@@ -98,7 +98,7 @@ Optional attributes:
 Run a PHP syntax check:
 
 ```bash
-find offload-video-to-cloudflare-stream -name '*.php' -print0 | xargs -0 -n1 php -l
+find voffload-cloudflare-stream -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
 Build an installable ZIP:
@@ -107,11 +107,11 @@ Build an installable ZIP:
 bash bin/build-zip.sh
 ```
 
-The build script creates `dist/offload-video-to-cloudflare-stream.zip`.
+The build script creates `dist/voffload-cloudflare-stream.zip`.
 
 ## WordPress.org release notes
 
-The WordPress.org plugin directory uses `readme.txt` in SVN `trunk` to find the `Stable tag`; that stable tag must point to a matching folder under `/tags/`. Keep the version in `offload-video-to-cloudflare-stream.php`, `readme.txt`, and the SVN tag folder synchronized.
+The WordPress.org plugin directory uses `readme.txt` in SVN `trunk` to find the `Stable tag`; that stable tag must point to a matching folder under `/tags/`. Keep the version in `voffload-cloudflare-stream.php`, `readme.txt`, and the SVN tag folder synchronized.
 
 ## License
 

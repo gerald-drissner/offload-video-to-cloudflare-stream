@@ -1,5 +1,5 @@
-=== Offload Video to Cloudflare Stream ===
-Contributors: gerald-drissner
+=== Voffload for Cloudflare Stream ===
+Contributors: geralddrissner
 Tags: video, video hosting, media offload, video player, streaming
 Requires at least: 6.5
 Tested up to: 7.0
@@ -12,7 +12,7 @@ Upload your WordPress video attachments to Cloudflare Stream and serve them thro
 
 == Description ==
 
-**Offload Video to Cloudflare Stream** lets you move the heavy lifting of video hosting and playback off your own server and onto Cloudflare Stream. You pick existing video attachments in your WordPress Media Library, the plugin uploads them to Cloudflare Stream, and your visitors then watch them through Cloudflare's adaptive‑bitrate player instead of downloading large files from your origin.
+**Voffload for Cloudflare Stream** moves the heavy lifting of video hosting and playback off your own server and onto Cloudflare Stream. You pick existing video attachments in your WordPress Media Library, the plugin uploads them to Cloudflare Stream, and your visitors then watch them through Cloudflare's adaptive‑bitrate player instead of downloading large files from your origin.
 
 This is useful if self‑hosted videos are slowing your site down, eating bandwidth, or stressing your host. Cloudflare Stream handles transcoding, multiple quality levels, and global delivery for you.
 
@@ -162,8 +162,8 @@ Yes. Define `OVCS_API_TOKEN` in `wp-config.php` and the plugin will use that and
 
 = 1.0.0 =
 * First public release prepared for the WordPress.org directory.
-* Renamed to "Offload Video to Cloudflare Stream" with a trademark‑compliant slug.
-* Added load_plugin_textdomain and a /languages path for translations.
+* Renamed to "Voffload for Cloudflare Stream" and updated the WordPress.org slug/text domain accordingly.
+* Removed the explicit translation loader because WordPress.org loads plugin translations automatically on supported WordPress versions.
 * Added uninstall cleanup that removes plugin options, transients, and local Stream metadata (Cloudflare videos are never touched).
 * Added a "Settings" link on the Plugins screen.
 * Hardened admin request handling with wp_unslash before sanitizing all input.

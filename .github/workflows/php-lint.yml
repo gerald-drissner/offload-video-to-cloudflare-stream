@@ -17,4 +17,4 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
       - name: PHP syntax check
-        run: find offload-video-to-cloudflare-stream -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find voffload-cloudflare-stream -name '*.php' -print0 | xargs -0 -n1 php -l

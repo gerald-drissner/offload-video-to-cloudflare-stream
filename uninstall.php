@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall handler for "Offload Video to Cloudflare Stream".
+ * Uninstall handler for "Voffload for Cloudflare Stream".
  *
  * Removes data this plugin stored in WordPress. It does NOT delete any videos
  * from Cloudflare Stream — those live in your Cloudflare account and are not

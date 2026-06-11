@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLUGIN_SLUG="offload-video-to-cloudflare-stream"
+PLUGIN_SLUG="voffload-cloudflare-stream"
 DIST_DIR="$ROOT_DIR/dist"
 BUILD_DIR="$DIST_DIR/build"
 ZIP_FILE="$DIST_DIR/${PLUGIN_SLUG}.zip"
