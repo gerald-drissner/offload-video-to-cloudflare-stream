@@ -7,7 +7,7 @@
  * touched here. To remove videos from Cloudflare, use the Cloudflare dashboard
  * or API.
  *
- * @package OffloadVideoToCloudflareStream
+ * @package VoffloadCFS
  */
 
 // Exit if this file is called directly or not during a real uninstall.
@@ -18,17 +18,17 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 /**
  * Remove plugin data for the current site in a multisite-safe way.
  */
-function ovcs_uninstall_site_cleanup(): void {
+function voffloadcfs_uninstall_site_cleanup(): void {
     global $wpdb;
 
-    delete_option('ovcs_options');
-    wp_clear_scheduled_hook('ovcs_status_cron');
+    delete_option('voffloadcfs_options');
+    wp_clear_scheduled_hook('voffloadcfs_status_cron');
 
     // Per-user transients (notices + connection-test results).
-    $like_notice  = $wpdb->esc_like('_transient_ovcs_notice_') . '%';
-    $like_notice2 = $wpdb->esc_like('_transient_timeout_ovcs_notice_') . '%';
-    $like_test    = $wpdb->esc_like('_transient_ovcs_connection_test_') . '%';
-    $like_test2   = $wpdb->esc_like('_transient_timeout_ovcs_connection_test_') . '%';
+    $like_notice  = $wpdb->esc_like('_transient_voffloadcfs_notice_') . '%';
+    $like_notice2 = $wpdb->esc_like('_transient_timeout_voffloadcfs_notice_') . '%';
+    $like_test    = $wpdb->esc_like('_transient_voffloadcfs_connection_test_') . '%';
+    $like_test2   = $wpdb->esc_like('_transient_timeout_voffloadcfs_connection_test_') . '%';
 
     // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time cleanup on uninstall.
     $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $like_notice));
@@ -39,19 +39,19 @@ function ovcs_uninstall_site_cleanup(): void {
 
     // Per-attachment meta this plugin created (local Stream metadata only).
     $meta_keys = [
-        '_ovcs_uid',
-        '_ovcs_state',
-        '_ovcs_ready',
-        '_ovcs_pct_complete',
-        '_ovcs_thumbnail',
-        '_ovcs_preview',
-        '_ovcs_hls',
-        '_ovcs_dash',
-        '_ovcs_last_error',
-        '_ovcs_uploaded_at',
-        '_ovcs_checked_at',
-        '_ovcs_result_json',
-        '_ovcs_upload_method',
+        '_voffloadcfs_uid',
+        '_voffloadcfs_state',
+        '_voffloadcfs_ready',
+        '_voffloadcfs_pct_complete',
+        '_voffloadcfs_thumbnail',
+        '_voffloadcfs_preview',
+        '_voffloadcfs_hls',
+        '_voffloadcfs_dash',
+        '_voffloadcfs_last_error',
+        '_voffloadcfs_uploaded_at',
+        '_voffloadcfs_checked_at',
+        '_voffloadcfs_result_json',
+        '_voffloadcfs_upload_method',
     ];
 
     foreach ($meta_keys as $meta_key) {
@@ -67,9 +67,9 @@ if (is_multisite()) {
 
     foreach ((array) $site_ids as $site_id) {
         switch_to_blog((int) $site_id);
-        ovcs_uninstall_site_cleanup();
+        voffloadcfs_uninstall_site_cleanup();
         restore_current_blog();
     }
 } else {
-    ovcs_uninstall_site_cleanup();
+    voffloadcfs_uninstall_site_cleanup();
 }
